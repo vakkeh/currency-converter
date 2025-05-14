@@ -425,7 +425,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [period, setPeriod] = useState('30d');
-  const isMobile = useMediaQuery('(max-width:900px)');
+  const isMobile = useMediaQuery(theme => theme.breakpoints.down('sm'));
 
   // Aktuální kurz z exchangerate-api.com
   useEffect(() => {
@@ -462,162 +462,239 @@ function App() {
 
   // Rozložení: pokud jsou novinky a není mobil, posuň převodník a graf doleva a zobraz novinky vpravo
   return (
-    <Container maxWidth="lg" sx={{ mt: 6 }}>
-      <Box sx={{
-        display: 'flex',
-        flexDirection: isMobile ? 'column' : 'row',
-        gap: 3,
-        alignItems: 'flex-start'
-      }}>
-        {/* Levý sloupec: převodník a graf pod sebou */}
-        <Box sx={{ flex: isMobile ? '1 1 100%' : '1 1 65%' }}>
-          {/* Převodník měn */}
-          <Paper elevation={4} sx={{ p: 4, borderRadius: 3, mb: 4 }}>
-            <Typography variant="h5" align="center" gutterBottom>
-              Převodník měn
-            </Typography>
-            {error && <Alert severity="error">{error}</Alert>}
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <Autocomplete
-                options={currencyOptions}
-                getOptionLabel={option => option.label}
-                value={currencyOptions.find(opt => opt.code === fromCurrency) || null}
-                onChange={(_, newValue) => setFromCurrency(newValue ? newValue.code : '')}
-                renderInput={(params) => <TextField {...params} label="Z měny" />}
-                disabled={loading}
-                isOptionEqualToValue={(option, value) => option.code === value.code}
-              />
-              <Autocomplete
-                options={currencyOptions}
-                getOptionLabel={option => option.label}
-                value={currencyOptions.find(opt => opt.code === toCurrency) || null}
-                onChange={(_, newValue) => setToCurrency(newValue ? newValue.code : '')}
-                renderInput={(params) => <TextField {...params} label="Do měny" />}
-                disabled={loading}
-                isOptionEqualToValue={(option, value) => option.code === value.code}
-              />
+    <Container maxWidth="lg" sx={{ mt: { xs: 2, sm: 6 }, mb: 4 }}>
+      {/* Nadpis */}
+      <Typography
+        variant="h4"
+        align="center"
+        gutterBottom
+        sx={{ fontSize: { xs: '1.5rem', sm: '2.25rem' }, fontWeight: 700 }}
+      >
+        Převodník měn
+      </Typography>
+  
+      {/* Hlavní layout: na mobilech sloupec, na větších obrazovkách řádek */}
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: { xs: 'column', md: 'row' },
+          gap: { xs: 2, md: 4 },
+          alignItems: 'stretch',
+          width: '100%',
+        }}
+      >
+        {/* Levý blok: převodník a graf */}
+        <Box sx={{ flex: 2, minWidth: 0 }}>
+          {/* Převodník */}
+          <Paper
+            elevation={4}
+            sx={{
+              p: { xs: 2, sm: 4 },
+              borderRadius: 3,
+              mb: { xs: 2, sm: 4 },
+            }}
+          >
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: { xs: 'column', sm: 'row' },
+                alignItems: { xs: 'stretch', sm: 'center' },
+                gap: 2,
+                mb: 2,
+              }}
+            >
               <TextField
                 label="Částka"
                 type="number"
                 value={amount}
-                onChange={e => setAmount(Number(e.target.value))}
-                inputProps={{ min: 0 }}
+                onChange={handleAmountChange}
                 fullWidth
-                disabled={loading}
+                size="small"
+                sx={{ flex: 1 }}
+                inputProps={{ min: 0 }}
               />
-              <Box sx={{ textAlign: 'center', mt: 2 }}>
-                {loading ? (
-                  <CircularProgress />
-                ) : (
-                  exchangeRate !== null && (
-                    <Typography variant="h5">
-                      {amount} {fromCurrency} ={' '}
-                      <strong>
-                        {convertedAmount ? convertedAmount.toFixed(2) : '...'} {toCurrency}
-                      </strong>
-                    </Typography>
-                  )
-                )}
-                {exchangeRate && (
-                  <Typography variant="caption" color="text.secondary">
-                    1 {fromCurrency} = {exchangeRate.toFixed(4)} {toCurrency}
-                  </Typography>
-                )}
-              </Box>
-            </Box>
-          </Paper>
-          {/* Graf vývoje kurzu */}
-          <Paper elevation={4} sx={{ p: 4, borderRadius: 3 }}>
-            <Typography variant="h5" align="center" gutterBottom>
-              Vývoj kurzu
-            </Typography>
-            <FormControl fullWidth sx={{ mb: 2 }}>
-              <InputLabel id="period-label">Období</InputLabel>
-              <Select
-                labelId="period-label"
-                value={period}
-                label="Období"
-                onChange={e => setPeriod(e.target.value)}
+              <TextField
+                select
+                label="Z měny"
+                value={fromCurrency}
+                onChange={handleFromCurrencyChange}
+                fullWidth
+                size="small"
+                sx={{ flex: 1 }}
               >
-                {Object.entries(PERIODS).map(([key, val]) => (
-                  <MenuItem key={key} value={key}>{val.label}</MenuItem>
+                {currencies.map((currency) => (
+                  <MenuItem key={currency} value={currency}>
+                    {currency}
+                  </MenuItem>
                 ))}
-              </Select>
-            </FormControl>
-            {historyLoading && <Box sx={{ display: 'flex', justifyContent: 'center' }}><CircularProgress /></Box>}
-            {historyError && <Alert severity="error">{historyError}</Alert>}
-            {historyData && (
+              </TextField>
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  mx: { xs: 0, sm: 1 },
+                }}
+              >
+                <IconButton
+                  aria-label="Prohodit měny"
+                  onClick={handleSwapCurrencies}
+                  size="large"
+                  sx={{
+                    border: '1px solid #ccc',
+                    borderRadius: 2,
+                    bgcolor: 'background.paper',
+                    mx: { xs: 0, sm: 1 },
+                  }}
+                >
+                  <SwapHorizIcon />
+                </IconButton>
+              </Box>
+              <TextField
+                select
+                label="Do měny"
+                value={toCurrency}
+                onChange={handleToCurrencyChange}
+                fullWidth
+                size="small"
+                sx={{ flex: 1 }}
+              >
+                {currencies.map((currency) => (
+                  <MenuItem key={currency} value={currency}>
+                    {currency}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Box>
+  
+            <Typography
+              variant="h6"
+              align="center"
+              sx={{
+                mt: 2,
+                fontSize: { xs: '1.1rem', sm: '1.25rem' },
+                wordBreak: 'break-word',
+              }}
+            >
+              {amount} {fromCurrency} ={' '}
+              <strong>
+                {convertedAmount} {toCurrency}
+              </strong>
+            </Typography>
+          </Paper>
+  
+          {/* Graf */}
+          <Paper
+            elevation={4}
+            sx={{
+              p: { xs: 2, sm: 4 },
+              borderRadius: 3,
+              mb: { xs: 2, sm: 4 },
+            }}
+          >
+            <Typography
+              variant="h6"
+              align="center"
+              gutterBottom
+              sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}
+            >
+              Vývoj kurzu ({fromCurrency} → {toCurrency})
+            </Typography>
+            <Box sx={{ width: '100%', overflowX: 'auto' }}>
               <Line
-                data={historyData}
+                data={chartData}
                 options={{
                   responsive: true,
+                  maintainAspectRatio: false,
                   plugins: {
-                    legend: { display: true },
-                    tooltip: { enabled: true }
+                    legend: { display: false },
                   },
                   scales: {
-                    x: { title: { display: true, text: 'Datum' } },
-                    y: { title: { display: true, text: `Kurz (${fromCurrency}/${toCurrency})` } }
-                  }
+                    x: { ticks: { font: { size: 10 } } },
+                    y: { ticks: { font: { size: 10 } } },
+                  },
                 }}
-                height={300}
+                height={isMobile ? 200 : 300}
               />
-            )}
+            </Box>
           </Paper>
-          {/* Novinky pod grafem pouze na mobilu */}
-          {isMobile && (newsError || newsLoading || news.length > 0) && (
-            <Paper elevation={4} sx={{ p: 4, borderRadius: 3, mt: 4 }}>
-              <Typography variant="h6" gutterBottom>
-                Novinky k {fromCurrency}/{toCurrency}
-              </Typography>
-              {newsError && (
-                <Alert severity="error">{newsError}</Alert>
-              )}
-              {newsLoading ? (
-                <CircularProgress />
-              ) : (
-                news.map(item => (
-                  <Box key={item.guid || item.link} sx={{ mb: 3 }}>
-                    <a href={item.link} target="_blank" rel="noopener noreferrer">
-                      <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>{item.title}</Typography>
-                    </a>
-                    <Typography variant="caption" color="text.secondary">{item.pubDate}</Typography>
-                    <Typography variant="body2" sx={{ mt: 0.5 }}>{item.description?.replace(/<[^>]+>/g, '').slice(0, 120)}...</Typography>
-                  </Box>
-                ))
-              )}
-            </Paper>
-          )}
         </Box>
-        {/* Pravý sloupec: novinky pouze na desktopu */}
-        {!isMobile && (newsError || newsLoading || news.length > 0) && (
-          <Box sx={{ flex: '1 1 32%' }}>
-            <Paper elevation={4} sx={{ p: 4, borderRadius: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Novinky k {fromCurrency}/{toCurrency}
-              </Typography>
-              {newsError && (
-                <Alert severity="error">{newsError}</Alert>
-              )}
-              {newsLoading ? (
-                <CircularProgress />
-              ) : (
-                news.map(item => (
-                  <Box key={item.guid || item.link} sx={{ mb: 3 }}>
-                    <a href={item.link} target="_blank" rel="noopener noreferrer">
-                      <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>{item.title}</Typography>
-                    </a>
-                    <Typography variant="caption" color="text.secondary">{item.pubDate}</Typography>
-                    <Typography variant="body2" sx={{ mt: 0.5 }}>{item.description?.replace(/<[^>]+>/g, '').slice(0, 120)}...</Typography>
-                  </Box>
-                ))
-              )}
-            </Paper>
-          </Box>
-        )}
+  
+        {/* Pravý blok: Novinky (na mobilech pod grafem, na desktopu vpravo) */}
+        <Box
+          sx={{
+            flex: 1,
+            minWidth: 0,
+            mt: { xs: 0, md: 0 },
+          }}
+        >
+          <Paper
+            elevation={4}
+            sx={{
+              p: { xs: 2, sm: 4 },
+              borderRadius: 3,
+              height: '100%',
+            }}
+          >
+            <Typography
+              variant="h6"
+              align="center"
+              gutterBottom
+              sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}
+            >
+              Novinky ze světa měn
+            </Typography>
+            <Box
+              component="ul"
+              sx={{
+                listStyle: 'none',
+                p: 0,
+                m: 0,
+                maxHeight: { xs: 220, sm: 300 },
+                overflowY: 'auto',
+              }}
+            >
+              {news.slice(0, isMobile ? 3 : 8).map((item, idx) => (
+                <Box
+                  key={idx}
+                  component="li"
+                  sx={{
+                    mb: 2,
+                    pb: 1,
+                    borderBottom: '1px solid #eee',
+                    '&:last-child': { borderBottom: 'none' },
+                  }}
+                >
+                  <Typography
+                    variant="subtitle2"
+                    component="a"
+                    href={item.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    sx={{
+                      color: 'primary.main',
+                      textDecoration: 'none',
+                      fontWeight: 500,
+                      fontSize: { xs: '0.95rem', sm: '1rem' },
+                      display: 'block',
+                    }}
+                  >
+                    {item.title}
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    sx={{ color: 'text.secondary', fontSize: { xs: '0.8rem', sm: '0.9rem' } }}
+                  >
+                    {item.pubDate}
+                  </Typography>
+                </Box>
+              ))}
+            </Box>
+          </Paper>
+        </Box>
       </Box>
     </Container>
-  );
+  );  
   
 }
 
